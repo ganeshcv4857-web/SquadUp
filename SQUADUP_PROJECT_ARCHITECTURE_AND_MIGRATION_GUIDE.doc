@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>SquadUp - Full Project Architecture & Migration Guide</title>
+<style>
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; line-height: 1.6; color: #1e293b; max-width: 900px; margin: 40px auto; padding: 0 20px; }
+  h1 { color: #0f172a; border-bottom: 3px solid #10b981; padding-bottom: 10px; font-size: 26px; }
+  h2 { color: #047857; margin-top: 30px; border-bottom: 1px solid #e2e8f0; padding-bottom: 6px; font-size: 20px; }
+  h3 { color: #1e293b; margin-top: 20px; font-size: 16px; }
+  table { width: 100%; border-collapse: collapse; margin: 16px 0; font-size: 13px; }
+  th, td { border: 1px solid #cbd5e1; padding: 8px 12px; text-align: left; }
+  th { background-color: #f1f5f9; color: #0f172a; }
+  tr:nth-child(even) { background-color: #f8fafc; }
+  code, pre { background-color: #f1f5f9; font-family: Consolas, Monaco, "Courier New", monospace; font-size: 12px; }
+  pre { padding: 14px; border-radius: 8px; border: 1px solid #e2e8f0; overflow-x: auto; }
+  .badge { background: #10b981; color: white; padding: 2px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+  .note { background: #ecfdf5; border-left: 4px solid #10b981; padding: 12px; margin: 16px 0; }
+</style>
+</head>
+<body>
+
+<h1>SQUADUP — Full Project Architecture, File Inventory & Cloud/Cortex Migration Guide</h1>
+<p><strong>Target Ingestion:</strong> Claude, Codex, Cloud Backends, Cortex Event Platforms<br>
+<strong>Platform:</strong> React Native / Expo SDK 57 / TypeScript / Web & Native Mobile<br>
+<strong>Directory:</strong> <code>C:\Users\HP\.gemini\antigravity\scratch\kickoff-match-app\</code></p>
+
+<div class="note">
+  <strong>Summary:</strong> This document contains an exhaustive breakdown of all 70+ files in the repository, the complete screen and navigation graph, state providers, multiplayer synchronization, 1080&times;1920 (9:16) Wrapped modules, database models, and cloud migration endpoints.
+</div>
+
+<h2>1. Executive Summary & Tech Stack</h2>
+<ul>
+  <li><strong>React Native:</strong> 0.86.3 | <strong>React:</strong> 19.2.3 | <strong>Expo SDK:</strong> 57.0.20</li>
+  <li><strong>Web Support:</strong> react-native-web 0.21.2</li>
+  <li><strong>TypeScript:</strong> 6.0.3 (Strict mode, 0 type errors)</li>
+  <li><strong>Navigation:</strong> React Navigation 7.x (Native Stack + Bottom Tabs)</li>
+  <li><strong>UI & Graphics:</strong> react-native-svg, expo-linear-gradient, @expo-google-fonts/zen-dots, @expo/vector-icons</li>
+  <li><strong>Local State:</strong> AsyncStorage, singleton reactive stores (TournamentStore), Context API, Web BroadcastChannel</li>
+</ul>
+
+<h2>2. Complete File Directory & Inventory</h2>
+<table>
+  <thead>
+    <tr><th>Category</th><th>File Path</th><th>Description</th></tr>
+  </thead>
+  <tbody>
+    <tr><td><strong>Config</strong></td><td>package.json</td><td>Project dependencies and scripts (start, web, android, ios)</td></tr>
+    <tr><td><strong>Config</strong></td><td>tsconfig.json</td><td>TypeScript compiler settings</td></tr>
+    <tr><td><strong>Config</strong></td><td>app.json</td><td>Expo app configuration (icons, splash screen, permissions)</td></tr>
+    <tr><td><strong>Config</strong></td><td>App.tsx</td><td>Top-level application entry point wrapping all 7 providers</td></tr>
+    <tr><td><strong>Navigation</strong></td><td>src/navigation/RootNavigator.tsx</td><td>Native stack navigator with all route declarations & types</td></tr>
+    <tr><td><strong>Navigation</strong></td><td>src/navigation/TabNavigator.tsx</td><td>5 bottom tabs: Home, Friends, Games, SplitUp, Alerts</td></tr>
+    <tr><td><strong>Store</strong></td><td>src/store/AuthContext.tsx</td><td>Phone OTP auth, session persistence, user profiles, jersey numbers</td></tr>
+    <tr><td><strong>Store</strong></td><td>src/store/RoomContext.tsx</td><td>Room lobby state, active room code, member lists, claim arbitration</td></tr>
+    <tr><td><strong>Store</strong></td><td>src/store/MultiplayerContext.tsx</td><td>Network connection state (CONNECTED, RECONNECTING, OFFLINE), recovery</td></tr>
+    <tr><td><strong>Store</strong></td><td>src/store/TournamentStore.ts</td><td>Singleton tournament engine, bracket progression, frozen player snapshots</td></tr>
+    <tr><td><strong>Store</strong></td><td>src/store/MatchContext.tsx</td><td>Active scorekeeper, match feed, and pitch fee collection tracking</td></tr>
+    <tr><td><strong>Store</strong></td><td>src/store/UserContext.tsx</td><td>User profile, friends list, stats, notification counter</td></tr>
+    <tr><td><strong>Store</strong></td><td>src/store/ThemeContext.tsx</td><td>Stadium dark/light theme engine, ZenDots font loader</td></tr>
+    <tr><td><strong>Service</strong></td><td>src/services/roomService.ts</td><td>6-char room codes, role management, BroadcastChannel sync</td></tr>
+    <tr><td><strong>Service</strong></td><td>src/services/multiplayerSyncService.ts</td><td>Exponential backoff reconnection, authoritative timers, host transfer</td></tr>
+    <tr><td><strong>Service</strong></td><td>src/services/teamService.ts</td><td>Skill-based team balancing, 2-4 team auto generator</td></tr>
+    <tr><td><strong>Service</strong></td><td>src/services/splitService.ts</td><td>Group turf expense calculations, UPI settlement tracking</td></tr>
+    <tr><td><strong>Service</strong></td><td>src/services/matchService.ts</td><td>Match CRUD, team formations, attendee joining/leaving</td></tr>
+    <tr><td><strong>Component</strong></td><td>src/components/common/PlayerAvatar.tsx</td><td>Universal avatar: custom photos, 12 presets, initials, jersey badge</td></tr>
+    <tr><td><strong>Component</strong></td><td>src/components/sharing/MatchWrappedModal.tsx</td><td>Strict 9:16 (1080x1920) Instagram Story export card. Both teams side-by-side</td></tr>
+    <tr><td><strong>Component</strong></td><td>src/components/sharing/PlayerCardModal.tsx</td><td>FIFA-style shareable ultimate team player card</td></tr>
+    <tr><td><strong>Component</strong></td><td>src/components/pitch/TacticalPitch.tsx</td><td>Interactive SVG pitch with draggable player nodes and formations</td></tr>
+    <tr><td><strong>Screen</strong></td><td>src/screens/teams/SpinWheelScreen.tsx</td><td>Precision team draw wheel: aerodynamic needle, notch studs, 2/3+ teams</td></tr>
+    <tr><td><strong>Screen</strong></td><td>src/screens/teams/PlayerDraftScreen.tsx</td><td>Turn-based captain draft: pick order, claim arbitration, friend invites</td></tr>
+    <tr><td><strong>Screen</strong></td><td>src/screens/match-center/LiveTournamentMatchScreen.tsx</td><td>Tournament match runner: friendly series, knockouts, penalty shootouts</td></tr>
+    <tr><td><strong>Screen</strong></td><td>src/screens/match-center/TournamentWrappedScreen.tsx</td><td>Strict 9:16 tournament story: podium, awards, rosters, minimal watermark</td></tr>
+    <tr><td><strong>Screen</strong></td><td>src/screens/history/MatchHistoryScreen.tsx</td><td>Historical match explorer with full rosters, timeline, and 9:16 Wrapped</td></tr>
+    <tr><td><strong>Screen</strong></td><td>src/screens/profile/ProfileScreen.tsx</td><td>Profile editor: photo, avatar, jersey #, player card, Match History modal</td></tr>
+  </tbody>
+</table>
+
+<h2>3. Database Models for Cloud / Cortex Migration</h2>
+
+<h3>Table: users</h3>
+<pre>CREATE TABLE users (
+  id UUID PRIMARY KEY,
+  phone VARCHAR(20) UNIQUE NOT NULL,
+  name VARCHAR(100) NOT NULL,
+  email VARCHAR(150),
+  avatar_url TEXT,
+  avatar_preset VARCHAR(50),
+  jersey_number INTEGER CHECK (jersey_number BETWEEN 1 AND 99),
+  rating NUMERIC(3, 1) DEFAULT 4.5,
+  overall_rating INTEGER DEFAULT 75,
+  primary_position VARCHAR(10) CHECK (primary_position IN ('GK', 'DEF', 'MID', 'FWD')),
+  specific_position VARCHAR(10),
+  preferred_foot VARCHAR(10) DEFAULT 'Right',
+  matches_played INTEGER DEFAULT 0,
+  goals INTEGER DEFAULT 0,
+  assists INTEGER DEFAULT 0,
+  clean_sheets INTEGER DEFAULT 0,
+  mvp_count INTEGER DEFAULT 0,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);</pre>
+
+<h3>Table: rooms</h3>
+<pre>CREATE TABLE rooms (
+  id UUID PRIMARY KEY,
+  room_code VARCHAR(6) UNIQUE NOT NULL,
+  host_id UUID REFERENCES users(id) ON DELETE CASCADE,
+  co_organizer_id UUID REFERENCES users(id),
+  title VARCHAR(150) NOT NULL,
+  venue_name VARCHAR(150) NOT NULL,
+  format VARCHAR(20) DEFAULT '7v7',
+  num_teams INTEGER DEFAULT 2,
+  players_per_team INTEGER DEFAULT 7,
+  goal_target INTEGER DEFAULT 0,
+  status VARCHAR(30) DEFAULT 'LOBBY',
+  revision INTEGER DEFAULT 1,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);</pre>
+
+<h3>Table: matches</h3>
+<pre>CREATE TABLE matches (
+  id UUID PRIMARY KEY,
+  room_id UUID REFERENCES rooms(id),
+  title VARCHAR(150) NOT NULL,
+  venue_name VARCHAR(150) NOT NULL,
+  format VARCHAR(20) DEFAULT '7v7',
+  surface VARCHAR(50) DEFAULT 'Artificial Turf',
+  date DATE NOT NULL,
+  team_a_name VARCHAR(100) NOT NULL,
+  team_b_name VARCHAR(100) NOT NULL,
+  team_a_score INTEGER DEFAULT 0,
+  team_b_score INTEGER DEFAULT 0,
+  duration_minutes INTEGER DEFAULT 50,
+  mvp_user_id UUID REFERENCES users(id),
+  status VARCHAR(30) DEFAULT 'UPCOMING',
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);</pre>
+
+<h2>4. Cloud & Cortex Migration Roadmap</h2>
+<ol>
+  <li><strong>Authentication:</strong> Replace mock phone auth in <code>src/store/AuthContext.tsx</code> with cloud JWT authentication (Twilio Verify / Firebase / Cortex Auth).</li>
+  <li><strong>Real-time Sockets:</strong> Replace <code>BroadcastChannel</code> in <code>src/services/roomService.ts</code> and <code>src/services/multiplayerSyncService.ts</code> with WebSocket / Socket.IO connection pools.</li>
+  <li><strong>Media Storage:</strong> Route <code>src/utils/imagePicker.ts</code> uploads through pre-signed S3 / Cloud Storage URLs and store the CDN URL in <code>users.avatar_url</code>.</li>
+  <li><strong>Draft Conflict Locking:</strong> Implement optimistic locking (using room <code>revision</code>) in <code>src/screens/teams/PlayerDraftScreen.tsx</code> so simultaneous taps by captains are validated atomically by the cloud database.</li>
+</ol>
+
+<p style="text-align: center; color: #64748b; font-size: 12px; margin-top: 40px;">
+  SquadUp Project Documentation &bull; Ready for Cloud / Cortex / Claude / Codex Ingestion
+</p>
+
+</body>
+</html>

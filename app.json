@@ -1,0 +1,36 @@
+{
+  "expo": {
+    "name": "KickOff",
+    "slug": "kickoff-match-app",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#0A0C18",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-font",
+        {
+          "fonts": [
+            "./assets/fonts/ZenDots-Regular.ttf"
+          ]
+        }
+      ],
+      "expo-video"
+    ]
+  }
+}
